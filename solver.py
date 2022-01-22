@@ -62,6 +62,35 @@ class QlHeftSolver:
         return Q[t_current, t_next] + alfa * (
                     ranku_array[t_current] + discount * max(Q[t_next]) - Q[t_current, t_next])
 
+    def __get_task_order(self, Q) -> list:
+        possible_tasks = []
+        task_order = []
+        for rank in range(len(self.problem.T)):
+            for task in self.problem.T[rank]:
+                ec_column = self.problem.E_C[:, task]
+                possible = True
+                for value in ec_column:
+                    if value != 0:
+                        possible = False
+                if possible:
+                    possible_tasks.append(task)
+
+        for iterator in range(len(self.problem.W)):
+            max_task = 0
+            max_task_q = 0
+            for possible_task in possible_tasks:
+                row = Q[possible_task]
+                max = np.amax(row)
+                if max >= max_task_q:
+                    max_task_q = max
+                    max_task = possible_task
+            task_order.append(max_task)
+            possible_tasks.remove(max_task)
+            for task in range(len(self.problem.W)):
+                if self.__is_new_possible_task(task, possible_tasks, task_order):
+                    possible_tasks.append(task)
+        return task_order
+
     def solve(self):
         number_of_nodes = len(self.problem.W)
         Q = np.zeros((number_of_nodes, number_of_nodes))
@@ -81,6 +110,7 @@ class QlHeftSolver:
                     if possible:
                         possible_tasks.append(task)
 
+            # Current should be chosen with e greedy strategy
             t_current = np.random.choice(possible_tasks)
             possible_tasks.remove(t_current)
             done_tasks.append(t_current)
@@ -97,3 +127,10 @@ class QlHeftSolver:
                 t_current = t_next
 
         # Q array is after learning process
+        # Create task order
+        task_order = self.__get_task_order(Q)
+
+        print("OK")
+
+
+

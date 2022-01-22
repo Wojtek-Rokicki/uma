@@ -17,7 +17,7 @@ class DagFactory:
         self.max_ranks = max_ranks  # Maximum number of ranks
         self.chance_of_edge = chance_of_edge  # Chance of creating edge between nodes
 
-    def create_dag(self):
+    def create_dag(self) -> Dag:
 
         T = []
         ranks = self.min_ranks + np.random.randint(0, high=(self.max_ranks - self.min_ranks))
