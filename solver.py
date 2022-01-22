@@ -1,16 +1,24 @@
+from concurrent.futures import process
 import numpy as np
 
 import problem
 
 np.random.seed(1)
 
+class Processor:
+    def __init__(self, speed):
+        self.speed = speed
+        self.tasks = []
+        self.tasks_starts = []
 
 class QlHeftSolver:
-    def __init__(self, max_iter, dag: problem.Dag, alfa, discount):
+    def __init__(self, max_iter, dag: problem.Dag, alfa, discount, processors: list):
         self.max_iter = max_iter
         self.problem = dag
         self.alfa = alfa
         self.discount = discount
+        self.processors = processors
+        self.mean_processors_speed = np.mean([i.speed for i in processors])
 
     def __create_ranku_array(self) -> np.ndarray:
         ranku_array = np.zeros(len(self.problem.W))
@@ -91,6 +99,51 @@ class QlHeftSolver:
                     possible_tasks.append(task)
         return task_order
 
+    def __ft(self, task):
+        for p in self.processors:
+            if task in p.tasks:
+                t_id = p.tasks.index(task)
+                if len(p.tasks_starts) == 0:
+                    return self.problem.W[task]*self.mean_processors_speed/p.speed
+                return p.tasks_starts[t_id] + self.problem.W[task]*self.mean_processors_speed/p.speed
+
+    def __at(self, processor):
+        if len(processor.tasks) == 0:
+            return 0
+        return processor.tasks_starts[-1] + self.problem.W[processor.tasks[-1]]*self.mean_processors_speed/processor.speed
+
+    def __est(self, task, processor):
+        avaliable_predecessors = self.problem.E_C[:, task]
+        predecessors = []
+        for i in range(len(avaliable_predecessors)):
+            if(avaliable_predecessors[i] != 0):
+                predecessors.append(i)
+
+        # Choose the max finish time with communication cost
+        predecessors_fts = []
+        for i in predecessors:
+            predecessors_fts.append(self.__ft(i) + self.problem.E_C[i, task]) # E_c is also a communication cost
+        
+        if len(predecessors_fts) == 0:
+            return self.__at(processor)
+        return max(max(predecessors_fts), self.__at(processor))
+
+    def __eft(self, task):
+        eft_list=[]
+        for p in self.processors:
+            speed_on_proc = self.problem.W[task] * self.mean_processors_speed / p.speed
+            eft_list.append(speed_on_proc + self.__est(task, p))
+        return eft_list
+    
+    def __allocate_tasks_to_processors(self, tasks):
+        for task in tasks:
+            efts = self.__eft(task)
+            eft_min_id = efts.index(min(efts))
+            processor = self.processors[eft_min_id]
+            start_time = efts[eft_min_id] - self.problem.W[task] * self.mean_processors_speed / processor.speed
+            processor.tasks.append(task)
+            processor.tasks_starts.append(start_time)
+
     def solve(self):
         number_of_nodes = len(self.problem.W)
         Q = np.zeros((number_of_nodes, number_of_nodes))
@@ -129,6 +182,8 @@ class QlHeftSolver:
         # Q array is after learning process
         # Create task order
         task_order = self.__get_task_order(Q)
+        self.__allocate_tasks_to_processors(task_order)
+        
 
         print("OK")
 
