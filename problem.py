@@ -1,5 +1,4 @@
 import numpy as np
-np.random.seed(1)  # Always use the same seed
 
 
 class Dag:
@@ -10,20 +9,21 @@ class Dag:
 
 
 class DagFactory:
-    def __init__(self, min_per_rank, max_per_rank, min_ranks, max_ranks, chance_of_edge):
+    def __init__(self, min_per_rank, max_per_rank, min_ranks, max_ranks, chance_of_edge, seed):
         self.min_per_rank = min_per_rank  # How wide graf minimaly is
         self.max_per_rank = max_per_rank  # How wide graf maximaly gets
         self.min_ranks = min_ranks  # Minimum number of ranks
         self.max_ranks = max_ranks  # Maximum number of ranks
         self.chance_of_edge = chance_of_edge  # Chance of creating edge between nodes
+        np.random.seed(seed)  # set random number generator seed
 
     def create_dag(self) -> Dag:
 
         T = []
-        ranks = self.min_ranks + np.random.randint(0, high=(self.max_ranks - self.min_ranks))
+        ranks = self.min_ranks + np.random.randint(0, high=(self.max_ranks - self.min_ranks) + 1)
         all_nodes = 0
         for i in range(ranks):
-            new_nodes = self.min_per_rank + np.random.randint(0, high=(self.max_per_rank - self.min_per_rank))
+            new_nodes = self.min_per_rank + np.random.randint(0, high=(self.max_per_rank - self.min_per_rank) + 1)
             T_rank = []
             for j in range(new_nodes):
                 T_rank.append(all_nodes + j)
@@ -47,5 +47,9 @@ class DagFactory:
         return Dag(T, E_C, W)
 
 
+def calc_ccr(dag: Dag):
+    mean_c = np.mean(dag.E_C)
+    mean_w = np.mean(dag.W)
+    return mean_c/mean_w
 
 
