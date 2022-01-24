@@ -5,6 +5,7 @@ import copy
 from tqdm import tqdm
 
 import problem
+
 np.random.seed(1)
 
 
@@ -70,7 +71,7 @@ class QlHeftSolver:
 
     def __calculate_q(self, ranku_array, t_current, t_next, Q: np.ndarray, alfa, discount):
         return Q[t_current, t_next] + alfa * (
-                    ranku_array[t_current] + discount * max(Q[t_next]) - Q[t_current, t_next])
+                ranku_array[t_current] + discount * max(Q[t_next]) - Q[t_current, t_next])
 
     def __get_task_order(self, Q) -> list:
         possible_tasks = []
@@ -109,12 +110,13 @@ class QlHeftSolver:
                 if len(p.tasks_starts) == 0:
                     return self.problem.W[task]*self.mean_processors_speed/p.speed
                 '''
-                return p.tasks_starts[t_id] + self.problem.W[task]*self.mean_processors_speed/p.speed, p
+                return p.tasks_starts[t_id] + self.problem.W[task] * self.mean_processors_speed / p.speed, p
 
     def __at(self, processor):
         if len(processor.tasks) == 0:
             return 0
-        return processor.tasks_starts[-1] + self.problem.W[processor.tasks[-1]]*self.mean_processors_speed/processor.speed
+        return processor.tasks_starts[-1] + self.problem.W[
+            processor.tasks[-1]] * self.mean_processors_speed / processor.speed
 
     def __est(self, task, processor):
         avaliable_predecessors = self.problem.E_C[:, task]
@@ -132,18 +134,18 @@ class QlHeftSolver:
                 predecessors_fts.append(ft)
             else:
                 predecessors_fts.append(ft + self.problem.E_C[i, task])  # E_c is also a communication cost
-        
+
         if len(predecessors_fts) == 0:
             return self.__at(processor)
         return max(max(predecessors_fts), self.__at(processor))
 
     def __eft(self, task):
-        eft_list=[]
+        eft_list = []
         for p in self.processors:
             speed_on_proc = self.problem.W[task] * self.mean_processors_speed / p.speed
             eft_list.append(speed_on_proc + self.__est(task, p))
         return eft_list
-    
+
     def __allocate_tasks_to_processors(self, tasks):
         for task in tasks:
             efts = self.__eft(task)
@@ -171,7 +173,6 @@ class QlHeftSolver:
                 child.append(index)
         return child
 
-
     def solve(self):
         number_of_nodes = len(self.problem.W)
         Q = np.zeros((number_of_nodes, number_of_nodes))
@@ -197,9 +198,7 @@ class QlHeftSolver:
                 print("Makespan = " + str(makespan))
                 print("Speedup = " + str(speedup))
 
-
-            epsilon = self.epsilon_start - (self.epsilon_start - self.epsilon_min) \
-                      * (iter / self.max_iter)
+            epsilon = self.epsilon_start - (self.epsilon_start - self.epsilon_min) * (iter / self.max_iter)
 
             possible_tasks = beggining_possible_tasks.copy()
             done_tasks = []
@@ -220,7 +219,7 @@ class QlHeftSolver:
                 best_iter = possible_tasks.index(best_task)
                 action_probabilities[best_iter] += (1.0 - epsilon)
                 t_next = np.random.choice(possible_tasks,
-                    p=action_probabilities)
+                                          p=action_probabilities)
                 # OLD t_nex
                 # t_next = np.random.choice(possible_tasks)
                 possible_tasks.remove(t_next)
@@ -232,9 +231,14 @@ class QlHeftSolver:
         # Q array is after learning process
         # Create task order
         task_order = self.__get_task_order(Q)
+        processors_copy = copy.deepcopy(self.processors)
         self.__allocate_tasks_to_processors(task_order)
         makespan = calc_makespan(self.processors, self.mean_processors_speed, self.problem.W)
-        #print("Makespan = " + str(makespan))
+        speedup = calc_speedup(self.processors, self.mean_processors_speed, self.problem.W, makespan)
+        self.processors = processors_copy
+        Makespans.append(makespan)
+        print("Makespan = " + str(makespan))
+        print("Speedup = " + str(speedup))
 
 
 def calc_makespan(processors: list, mean_proc_speed, W):
@@ -256,8 +260,8 @@ def calc_speedup(processors: list, mean_proc_speed, W, makespan):
         if proc.speed > best_proc.speed:
             best_proc = proc
 
-    best_proc_time = 0
-    for task in best_proc.tasks:
-        best_proc_time += W[task] * mean_proc_speed / best_proc.speed
+    time_on_best_proc = 0
+    for task in W:
+        time_on_best_proc += task * mean_proc_speed / best_proc.speed
 
-    return best_proc_time/makespan
+    return time_on_best_proc / makespan
