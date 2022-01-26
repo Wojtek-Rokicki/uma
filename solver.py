@@ -1,5 +1,4 @@
 import numpy as np
-import time
 import copy
 
 from tqdm import tqdm
@@ -184,6 +183,7 @@ class QlHeftSolver:
                 beggining_possible_tasks.append(task)
 
         Makespans = []
+        Speedups = []
 
         for iter in tqdm(range(self.max_iter)):
             if iter % 100 == 0:
@@ -194,6 +194,7 @@ class QlHeftSolver:
                 speedup = calc_speedup(self.processors, self.mean_processors_speed, self.problem.W, makespan)
                 self.processors = processors_copy
                 Makespans.append(makespan)
+                Speedups.append(speedup)
                 print("\n")
                 print("Makespan = " + str(makespan))
                 print("Speedup = " + str(speedup))
@@ -235,10 +236,10 @@ class QlHeftSolver:
         self.__allocate_tasks_to_processors(task_order)
         makespan = calc_makespan(self.processors, self.mean_processors_speed, self.problem.W)
         speedup = calc_speedup(self.processors, self.mean_processors_speed, self.problem.W, makespan)
-        self.processors = processors_copy
         Makespans.append(makespan)
         print("Makespan = " + str(makespan))
         print("Speedup = " + str(speedup))
+        return self.processors
 
 
 def calc_makespan(processors: list, mean_proc_speed, W):
