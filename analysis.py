@@ -2,38 +2,27 @@ import matplotlib.pyplot as plt
 from problem import DagFactory
 
 
-def plot_stats(makespans: list, speedups: list, arts: list, efficiencies: list, dag_factory: DagFactory, step,
-               iterations, ccr):
-    plt.figure(0)
+def plot_stats(makespans: list, speedups: list, arts: list, efficiencies: list, dag_factory: DagFactory, step, folder,
+               filename):
     steps = range(0, len(makespans) * step, step)
-    plt.plot(steps, makespans)
-    plt.title(f'Iterations={iterations}, CCR={ccr}', pad=30)
-    plt.xlabel("Liczba iteracji nauczania")
-    plt.ylabel("Makespan")
-    plt.savefig(f"results/makespan/makespan-{dag_factory.min_ranks}-{dag_factory.max_ranks}-{dag_factory.min_per_rank}"
-                f"-{dag_factory.max_per_rank}-{dag_factory.seed}.pdf")
-    plt.close(0)
 
-    plt.figure(0)
-    plt.plot(steps, speedups)
-    plt.xlabel("Liczba iteracji nauczania")
-    plt.ylabel("Speedup")
-    plt.savefig(f"results/speedup/speedup-{dag_factory.min_ranks}-{dag_factory.max_ranks}-{dag_factory.min_per_rank}"
-                f"-{dag_factory.max_per_rank}-{dag_factory.seed}.pdf")
-    plt.close(0)
+    fig, axs = plt.subplots(2, 2)
+    axs[0, 0].plot(steps, makespans)
+    axs[0, 0].set_title("Makespan")
+    axs[0, 0].set(xlabel="Liczba iteracji nauczania", ylabel="Makespan")
 
-    plt.figure(0)
-    plt.plot(steps, arts)
-    plt.xlabel("Liczba iteracji nauczania")
-    plt.ylabel("ART")
-    plt.savefig(f"results/art/art-{dag_factory.min_ranks}-{dag_factory.max_ranks}-{dag_factory.min_per_rank}"
-                f"-{dag_factory.max_per_rank}-{dag_factory.seed}.pdf")
-    plt.close(0)
+    axs[0, 1].plot(steps, speedups)
+    axs[0, 1].set_title("Speedup")
+    axs[0, 1].set(xlabel="Liczba iteracji nauczania", ylabel="Speedup")
 
-    plt.figure(0)
-    plt.plot(steps, efficiencies)
-    plt.xlabel("Liczba iteracji nauczania")
-    plt.ylabel("Efficiency")
-    plt.savefig(f"results/efficiency/efficiency-{dag_factory.min_ranks}-{dag_factory.max_ranks}-{dag_factory.min_per_rank}"
-                f"-{dag_factory.max_per_rank}-{dag_factory.seed}.pdf")
-    plt.close(0)
+    axs[1, 0].plot(steps, arts)
+    axs[1, 0].set_title("ART")
+    axs[1, 0].set(xlabel="Liczba iteracji nauczania", ylabel="ART")
+
+    axs[1, 1].plot(steps, efficiencies)
+    axs[1, 1].set_title("Efficiency")
+    axs[1, 1].set(xlabel="Liczba iteracji nauczania", ylabel="Efficiency")
+
+    plt.tight_layout()
+    plt.savefig(f"results/{folder}/{filename}.png")
+    #plt.show()

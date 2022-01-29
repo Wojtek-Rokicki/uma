@@ -199,13 +199,8 @@ class QlHeftSolver:
                 Speedups.append(speedup)
                 Arts.append(art)
                 Efficiencies.append(calc_efficency(self.processors, speedup))
-                #print("\n")
-                #print("Makespan = " + str(makespan))
-                #print("Speedup = " + str(speedup))
-                #print("Art = " + str(art))
 
             epsilon = self.epsilon_start - (self.epsilon_start - self.epsilon_min) * (iter / self.max_iter)
-
             possible_tasks = beggining_possible_tasks.copy()
             done_tasks = []
 
@@ -245,9 +240,6 @@ class QlHeftSolver:
         Speedups.append(speedup)
         Arts.append(art)
         Efficiencies.append(calc_efficency(self.processors, speedup))
-        #print("Makespan = " + str(makespan))
-        #print("Speedup = " + str(speedup))
-        #print("Art = " + str(art))
         return self.processors, Makespans, Speedups, Arts, Efficiencies
 
 
