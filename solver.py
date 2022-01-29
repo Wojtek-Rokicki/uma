@@ -5,8 +5,6 @@ from tqdm import tqdm
 
 import problem
 
-np.random.seed(1)
-
 
 class Processor:
     def __init__(self, speed):
@@ -16,8 +14,8 @@ class Processor:
 
 
 class QlHeftSolver:
-    def __init__(self, max_iter, dag: problem.Dag, alfa, discount, processors: list,
-                 epsilon_min=0.01, epsilon_start=0.99):
+    def __init__(self, max_iter, dag: problem.Dag, alfa, discount, processors: list, seed,
+                 epsilon_min=0.2, epsilon_start=0.99):
         self.max_iter = max_iter
         self.problem = dag
         self.alfa = alfa
@@ -26,6 +24,7 @@ class QlHeftSolver:
         self.mean_processors_speed = np.mean([i.speed for i in processors])
         self.epsilon_min = epsilon_min
         self.epsilon_start = epsilon_start
+        np.random.seed(seed)
 
     def __create_ranku_array(self) -> np.ndarray:
         ranku_array = np.zeros(len(self.problem.W))
@@ -138,7 +137,7 @@ class QlHeftSolver:
             return self.__at(processor)
         return max(max(predecessors_fts), self.__at(processor))
 
-    def __eft(self, task):
+    def eft(self, task):
         eft_list = []
         for p in self.processors:
             speed_on_proc = self.problem.W[task] * self.mean_processors_speed / p.speed
@@ -147,7 +146,7 @@ class QlHeftSolver:
 
     def __allocate_tasks_to_processors(self, tasks):
         for task in tasks:
-            efts = self.__eft(task)
+            efts = self.eft(task)
             eft_min_id = efts.index(min(efts))
             processor = self.processors[eft_min_id]
             start_time = efts[eft_min_id] - self.problem.W[task] * self.mean_processors_speed / processor.speed
@@ -172,7 +171,7 @@ class QlHeftSolver:
                 child.append(index)
         return child
 
-    def solve(self):
+    def solve(self, evaluate_every=100, disable_status=False):
         number_of_nodes = len(self.problem.W)
         Q = np.zeros((number_of_nodes, number_of_nodes))
         ranku_array = self.__create_ranku_array()
@@ -184,20 +183,26 @@ class QlHeftSolver:
 
         Makespans = []
         Speedups = []
+        Efficiencies = []
+        Arts = []
 
-        for iter in tqdm(range(self.max_iter)):
-            if iter % 100 == 0:
+        for iter in tqdm(range(self.max_iter), disable=disable_status):
+            if iter % evaluate_every == 0:
                 task_order = self.__get_task_order(Q)
                 processors_copy = copy.deepcopy(self.processors)
                 self.__allocate_tasks_to_processors(task_order)
                 makespan = calc_makespan(self.processors, self.mean_processors_speed, self.problem.W)
                 speedup = calc_speedup(self.processors, self.mean_processors_speed, self.problem.W, makespan)
+                art = calc_art(self.processors, self.problem.W, self.mean_processors_speed)
                 self.processors = processors_copy
                 Makespans.append(makespan)
                 Speedups.append(speedup)
-                print("\n")
-                print("Makespan = " + str(makespan))
-                print("Speedup = " + str(speedup))
+                Arts.append(art)
+                Efficiencies.append(calc_efficency(self.processors, speedup))
+                #print("\n")
+                #print("Makespan = " + str(makespan))
+                #print("Speedup = " + str(speedup))
+                #print("Art = " + str(art))
 
             epsilon = self.epsilon_start - (self.epsilon_start - self.epsilon_min) * (iter / self.max_iter)
 
@@ -232,14 +237,18 @@ class QlHeftSolver:
         # Q array is after learning process
         # Create task order
         task_order = self.__get_task_order(Q)
-        processors_copy = copy.deepcopy(self.processors)
         self.__allocate_tasks_to_processors(task_order)
         makespan = calc_makespan(self.processors, self.mean_processors_speed, self.problem.W)
         speedup = calc_speedup(self.processors, self.mean_processors_speed, self.problem.W, makespan)
+        art = calc_art(self.processors, self.problem.W, self.mean_processors_speed)
         Makespans.append(makespan)
-        print("Makespan = " + str(makespan))
-        print("Speedup = " + str(speedup))
-        return self.processors
+        Speedups.append(speedup)
+        Arts.append(art)
+        Efficiencies.append(calc_efficency(self.processors, speedup))
+        #print("Makespan = " + str(makespan))
+        #print("Speedup = " + str(speedup))
+        #print("Art = " + str(art))
+        return self.processors, Makespans, Speedups, Arts, Efficiencies
 
 
 def calc_makespan(processors: list, mean_proc_speed, W):
@@ -264,5 +273,21 @@ def calc_speedup(processors: list, mean_proc_speed, W, makespan):
     time_on_best_proc = 0
     for task in W:
         time_on_best_proc += task * mean_proc_speed / best_proc.speed
-
     return time_on_best_proc / makespan
+
+
+def calc_efficency(processors: list, speedup):
+    return speedup / len(processors)
+
+
+def calc_art(processors: list, W, mean_proc_speed):
+    task_cnt = len(W)
+    art_sum = 0
+    for task in range(len(W)):
+        for proc in processors:
+            if task in proc.tasks:
+                task_proc = proc
+                break
+
+        art_sum += W[task] * mean_proc_speed / task_proc.speed
+    return art_sum / task_cnt

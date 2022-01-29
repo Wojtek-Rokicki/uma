@@ -20,6 +20,7 @@ class DagFactory:
         self.max_edge_cost = max_edge_cost
         self.min_task_cost = min_task_cost
         self.max_task_cost = max_task_cost
+        self.seed = seed
         np.random.seed(seed)  # set random number generator seed
 
     def create_dag(self) -> Dag:
@@ -54,7 +55,7 @@ class DagFactory:
 
 
 def calc_ccr(dag: Dag):
-    mean_c = np.mean(dag.E_C)
+    mean_c = np.mean(dag.E_C[dag.E_C > 0])
     mean_w = np.mean(dag.W)
     return mean_c/mean_w
 
